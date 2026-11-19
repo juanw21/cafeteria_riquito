@@ -1,0 +1,2 @@
+const express=require('express'),cors=require('cors'),helmet=require('helmet'),api=require('./routes/api'),{notFound,errorHandler}=require('./middlewares/errors');
+const app=express();app.use(helmet());const origins=(process.env.CORS_ORIGINS||'http://localhost:4200').split(',').map(x=>x.trim());app.use(cors({origin(orig,cb){if(!orig||origins.includes(orig))return cb(null,true);cb(new Error('Origen no permitido'));}}));app.use(express.json({limit:'1mb'}));app.use('/api',api);app.use(notFound);app.use(errorHandler);module.exports=app;
