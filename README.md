@@ -1,59 +1,52 @@
-# Sistema web de cafetería
+# Riquito Riquito
 
-Aplicación independiente con Angular, Express/CommonJS y MySQL. Los registros comerciales se administran en la base de datos; el esquema no incluye productos ni datos ficticios.
-
-La interfaz usa una estructura editorial de cafetería reconocida como referencia visual (navegación por secciones, fotografía/video protagonista, tarjetas de menú y paleta verde cálida), sin usar logos ni textos de otra marca. El video ambiental de Pexels se registra en MySQL y se obtiene por la API.
+Aplicación web para una cafetería, construida con Angular, Node.js/Express y MySQL. El frontend consume el backend mediante la API REST.
 
 ## Requisitos
 
-- Node.js 24.15 o posterior y npm (requerido por la versión actual de Angular).
+- Node.js 24.15 o posterior y npm.
 - MySQL 8.0 o posterior.
+- Ollama con `gemma3:4b` para habilitar respuestas del chatbot con Gemma 3 (opcional; hay respuestas de respaldo si Ollama no está disponible).
 
-## Base de datos y backend
+## Preparar MySQL y backend
 
-### Crear la base desde MySQL Workbench
+1. Clona este repositorio y abre una terminal en la carpeta `backend`.
+2. Instala dependencias con `npm install`.
+3. Copia `.env.example` como `.env` y configura la conexión de MySQL y un `JWT_SECRET` propio. El `.env` real no forma parte del repositorio.
+4. Crea el esquema desde MySQL Workbench abriendo `database/schema.sql`, o ejecuta `npm run db:init` después de configurar `.env`.
+5. Carga la información inicial de demostración con `npm run db:seed`. El comando es idempotente: agrega los datos que falten sin reemplazar cambios existentes. Los precios están en BOB y son demostrativos; los datos de contacto no confirmados quedan vacíos.
+6. En la primera instalación, ejecuta `npm run db:product-images`. Descarga fotos de producto a `frontend/public/uploads/productos` y guarda sus rutas en MySQL. Requiere conexión a Internet.
+7. Inicia la API con `npm start`. La API usa `http://127.0.0.1:3000`; `GET /api/health` comprueba el acceso a MySQL.
+8. Crea el usuario administrador con `npm run admin:create`.
 
-1. Abre Workbench y conéctate a tu servidor MySQL local.
-2. Abre `backend/database/schema.sql` con **File → Open SQL Script**.
-3. Ejecuta todo el script con el botón del rayo (Execute). El script crea `cafeteria_app_db`, sus tablas y un registro de video Pexels; se puede volver a ejecutar sin duplicar tablas ni el video. No borra tablas ni inserta productos comerciales.
-4. En el panel **SCHEMAS**, pulsa **Refresh**. Debe aparecer `cafeteria_app_db`; expándela para ver las tablas.
-5. Confirma la conexión del backend en `backend/.env`: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` y `DB_NAME=cafeteria_app_db` deben corresponder a la misma conexión de Workbench.
-6. Desde la terminal, entra en `backend/`, instala dependencias con `npm install` y ejecuta `npm start`. La API queda disponible en `http://127.0.0.1:3000`; `GET /api/health` comprueba que Node puede conectar a MySQL.
-7. Crea el primer administrador con `npm run admin:create`. El comando solicita nombre, correo y contraseña y guarda la contraseña con hash bcrypt.
+Para usar el chatbot con Gemma 3, instala Ollama, ejecuta `ollama pull gemma3:4b` y configura `OLLAMA_ENABLED`, `OLLAMA_URL` y `OLLAMA_MODEL` en `.env`.
 
-El comando alternativo `npm run db:init` ejecuta ese mismo `schema.sql` usando la conexión de `.env`.
+## Preparar frontend
 
-### Chatbot local
+En otra terminal, entra en `frontend`, instala dependencias con `npm install` y ejecuta `npm start`. Angular queda disponible en `http://localhost:4200`.
 
-El backend consulta primero MySQL y entrega al modelo solo los registros recuperados. Si Ollama no responde, utiliza una respuesta de respaldo basada en esos registros. Para habilitar Gemma 3 localmente, instala Ollama y ejecuta `ollama pull gemma3:4b`; configura `OLLAMA_ENABLED=true`, `OLLAMA_URL` y `OLLAMA_MODEL` en `.env`. Smoke check opcional: `npm run test:ollama`.
+La URL del backend se configura en `frontend/src/environments/environment.ts`. Las imágenes locales se sirven desde `frontend/public`.
 
-## Frontend
+## Datos almacenados en MySQL
 
-En otra consola: `cd frontend`, `npm install`, `npm start`. Angular queda disponible en `http://localhost:4200`. La URL REST está centralizada en `frontend/src/environments/environment.ts`.
+- `galeria`: video de portada e imágenes de la cafetería.
+- `categorias` y `productos`: menú, descripciones, disponibilidad y precios.
+- `servicios` y `especialidades`: servicios ofrecidos y productos destacados.
+- `contenido_sitio`: textos de inicio, nosotros y las demás secciones.
+- `configuracion_cafeteria`: nombre, contacto, horario, moneda y redes sociales.
+- `preguntas_frecuentes`: respuestas de referencia para el chatbot.
+- `mensajes_contacto`: mensajes enviados desde el formulario.
 
-Desde `/admin` inicia sesión y crea categorías, productos, servicios, especialidades, textos, imágenes (por ruta), preguntas frecuentes y demás contenido. La portada consulta la API y muestra estados vacíos cuando no hay registros activos.
+El contenido inicial se carga desde `backend/database/seed.js`; el video de portada se agrega desde `backend/database/schema.sql`. La base de datos local y el archivo `.env` no se suben a GitHub.
 
-## Datos de cada apartado en MySQL
+## Administración
 
-- Video de portada y fotos: `galeria` (`tipo='video'` o `tipo='imagen'`, con `ruta_archivo`).
-- Servicios: `servicios`.
-- Especialidades: `especialidades`, opcionalmente relacionadas con `productos`.
-- Menú, categorías y precios: `categorias` y `productos.precio` (DECIMAL).
-- Portada e información “Nosotros”: `contenido_sitio` (`seccion='inicio'` o `seccion='nosotros'`).
-- Contacto y datos generales: `configuracion_cafeteria`; los mensajes se guardan en `mensajes_contacto`.
+Abre `http://localhost:4200/admin` e inicia sesión para administrar productos, precios, servicios, especialidades, galería, textos, preguntas frecuentes y datos del negocio.
 
-Angular obtiene estos registros mediante la API. El esquema registra el video ambiental de Pexels, pero no inventa servicios, productos, precios, historia ni datos de contacto. Completa la información real desde `/admin`.
+## API
 
-## Endpoints
+Los endpoints están bajo `/api`. Consulta [API.md](API.md) para ver rutas, autenticación y formatos de respuesta.
 
-La API está bajo `/api`. Ejemplos completos y formato de respuestas en [API.md](API.md). `GET /api/health` comprueba el proceso y el acceso a MySQL. `POST /api/chatbot` recupera contexto de la base de datos y usa Gemma 3 por Ollama cuando está disponible; también tiene respaldo local sin Ollama.
+## Pruebas
 
-## Pruebas y verificación
-
-Con un esquema ya creado en una base **desechable de pruebas**, configura `backend/.env` para apuntar a esa base. Entra a `backend/` y ejecuta `npm test`. La suite crea un usuario y registros temporales con identificadores únicos y los elimina al finalizar. No la ejecutes apuntando a una base con datos reales.
-
-## Estado de esta entrega
-
-Incluye esquema relacional, API con login JWT, CRUD para recursos de contenido, configuración, recepción y consulta administrativa de mensajes, limitación del chatbot y una interfaz pública/admin. El chatbot recupera productos, categorías, servicios, especialidades, configuración, contenido y preguntas frecuentes desde MySQL antes de generar una respuesta con Gemma 3.
-
-Las imágenes se administran como rutas/URL; la carga real de archivos desde el navegador y la paginación/filtros siguen pendientes. Las pruebas de integración requieren una base desechable con el esquema instalado. No se han cargado datos comerciales de ejemplo.
+Con una base de pruebas desechable que tenga el esquema instalado, ejecuta `npm test` desde `backend`. No uses una base que contenga datos importantes.
